@@ -1,22 +1,29 @@
-# Build stage
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build  # use correct SDK version
 WORKDIR /src
 
-# Copy the API project
-COPY UserManagement.API/*.csproj ./UserManagement.API/
-WORKDIR /src/UserManagement.API
+# Copy solution file first
+COPY *.sln ./
 
-# Restore dependencies
+# Copy all projects
+COPY UserManagement.API/*.csproj ./UserManagement.API/
+COPY UserManagement.Application/*.csproj ./UserManagement.Application/
+COPY UserManagement.Infrastructure/*.csproj ./UserManagement.Infrastructure/
+
+# Restore all dependencies
 RUN dotnet restore
 
-# Copy all files
+# Copy everything else
 COPY . .
 
-# Publish the project
-RUN dotnet publish -c Release -o /app/out
+# Build
+RUN dotnet build -c Release --no-restore
 
-# Runtime stage
-FROM mcr.microsoft.com/dotnet/aspnet:7.0
+# Publish
+RUN dotnet publish -c Release -o /app --no-build
+
+# Runtime image
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
-COPY --from=build /app/out ./
+COPY --from=build /app .
+EXPOSE 80
 ENTRYPOINT ["dotnet", "UserManagement.API.dll"]

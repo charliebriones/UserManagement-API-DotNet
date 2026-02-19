@@ -1,36 +1,34 @@
+# ==============================
 # Stage 1: Build
+# ==============================
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
-
-# Set working directory inside container
 WORKDIR /src
 
-# Copy the solution file
-COPY UserManagement/UserManagement.sln ./
+# Copy solution file (.slnx!)
+COPY UserManagement.slnx ./
 
-# Copy all project files
-COPY UserManagement/UserManagement.API/*.csproj ./UserManagement.API/
-COPY UserManagement/UserManagement.Application/*.csproj ./UserManagement.Application/
-COPY UserManagement/UserManagement.Infrastructure/*.csproj ./UserManagement.Infrastructure/
+# Copy project files
+COPY UserManagement.API/*.csproj ./UserManagement.API/
+COPY UserManagement.Application/*.csproj ./UserManagement.Application/
+COPY UserManagement.Domain/*.csproj ./UserManagement.Domain/
+COPY UserManagement.Infrastructure/*.csproj ./UserManagement.Infrastructure/
 
-# Restore NuGet packages
-RUN dotnet restore
+# Restore
+RUN dotnet restore UserManagement.slnx
 
-# Copy the rest of the source code
-COPY UserManagement/UserManagement.API/. ./UserManagement.API/
-COPY UserManagement/UserManagement.Application/. ./UserManagement.Application/
-COPY UserManagement/UserManagement.Infrastructure/. ./UserManagement.Infrastructure/
+# Copy everything else
+COPY . .
 
-# Build the app
-RUN dotnet publish -c Release -o /app/publish
+# Publish API project
+RUN dotnet publish UserManagement.API/UserManagement.API.csproj -c Release -o /app/publish
 
+# ==============================
 # Stage 2: Runtime
+# ==============================
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
+
 COPY --from=build /app/publish .
 
-# Expose port (optional, depending on your app)
 EXPOSE 80
-EXPOSE 443
-
-# Run the application
 ENTRYPOINT ["dotnet", "UserManagement.API.dll"]

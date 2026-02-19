@@ -1,29 +1,38 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build  # use correct SDK version
+# Use the .NET 10 SDK for building
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+
+# Set working directory
 WORKDIR /src
 
-# Copy solution file first
+# Copy solution file
 COPY *.sln ./
 
-# Copy all projects
+# Copy all project files
 COPY UserManagement.API/*.csproj ./UserManagement.API/
 COPY UserManagement.Application/*.csproj ./UserManagement.Application/
 COPY UserManagement.Infrastructure/*.csproj ./UserManagement.Infrastructure/
 
-# Restore all dependencies
+# Restore all projects
 RUN dotnet restore
 
-# Copy everything else
+# Copy all source code
 COPY . .
 
-# Build
+# Build the solution in Release mode
 RUN dotnet build -c Release --no-restore
 
-# Publish
-RUN dotnet publish -c Release -o /app --no-build
+# Publish the API project
+RUN dotnet publish UserManagement.API/UserManagement.API.csproj -c Release -o /app --no-build
 
-# Runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
+# Use lightweight runtime image
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
+
+# Copy the published output from build stage
 COPY --from=build /app .
+
+# Expose HTTP port
 EXPOSE 80
+
+# Entry point for the container
 ENTRYPOINT ["dotnet", "UserManagement.API.dll"]

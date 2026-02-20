@@ -13,33 +13,32 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 // Database
-// Connection string automatically picked up from appsettings.json + appsettings.{Environment}.json
-// Production override comes from Azure App Service configuration
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection")
+    )
 );
 
 // Dependency Injection
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 
-// Swagger (only in Development)
+// Swagger (Development only)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// CORS Policy
-var allowedOrigins = builder.Configuration
-                            .GetSection("AllowedOrigins")
-                            .Get<string[]>() ?? Array.Empty<string>();
-
+// ✅ Hardcoded CORS (GitHub Pages + Local Dev)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngularClient", policy =>
     {
-        policy.WithOrigins("https://charliebriones.github.io",
-                "http://localhost:4200")
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+        policy
+            .WithOrigins(
+                "https://charliebriones.github.io",
+                "http://localhost:4200"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod();
     });
 });
 
@@ -56,18 +55,18 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "User Management API V1");
-        options.RoutePrefix = "swagger"; // Swagger at /swagger
+        options.RoutePrefix = "swagger";
     });
 }
 
 app.UseHttpsRedirection();
 
-// Enable CORS before Authorization
+// ✅ CORS must come before MapControllers
 app.UseCors("AllowAngularClient");
 
 app.UseAuthorization();
 
-// Map controllers
+// Map controllers (includes HealthController)
 app.MapControllers();
 
 #endregion
